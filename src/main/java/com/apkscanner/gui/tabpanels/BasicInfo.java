@@ -17,7 +17,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -100,7 +104,7 @@ public class BasicInfo extends AbstractTabbedPanel
         PlugInManager.addPlugInEventListener(new PlugInEventAdapter() {
             @Override
             public void onPluginLoaded() {
-                setPluginSearcher();
+                setPluginSearcher("");
             }
         });
     }
@@ -149,7 +153,7 @@ public class BasicInfo extends AbstractTabbedPanel
     public void propertyChange(PropertyChangeEvent evt) {
         Log.v("Change property : " + evt);
         super.propertyChange(evt);
-        setPluginSearcher();
+        setPluginSearcher("");
     }
 
     private void showAbout() {
@@ -243,7 +247,7 @@ public class BasicInfo extends AbstractTabbedPanel
             setFileSize(apkInfo.filePath);
             setFeatures(apkInfo);
             setPermissionList(apkInfo);
-            setPluginSearcher();
+            setPluginSearcher(apkInfo.manifest.packageName);
         } else {
             apkInfoPanel.setText(RFile.RAW_APEX_INFO_LAYOUT_HTML.getString());
             setPlatformIcon(apkInfo.manifest.usesSdk.targetSdkVersion);
@@ -601,7 +605,7 @@ public class BasicInfo extends AbstractTabbedPanel
                 String.format("<td id=\"basic-info-height-td\" height=\"%d\"></td>", infoHeight));
     }
 
-    private void setPluginSearcher() {
+    private void setPluginSearcher(String packageName) {
         if (apkInfoPanel == null) return;
         String packageSearchers = "";
         String appLabelSearchers = "";
@@ -614,6 +618,8 @@ public class BasicInfo extends AbstractTabbedPanel
                 if (!searcher.isVisibleToBasic()) continue;
                 URL icon = searcher.getIconURL();
                 String iconPath = icon != null ? icon.toString() : defaultSearchIcon;
+                if (!packageName.isEmpty() && !checkGpStatus(packageName))
+                    iconPath = iconPath.replace("PlayStoreIcon.png", "PlayStoreOffIcon.png");
                 String tag = makeHyperEvent("PLUGIN:" + searcher.hashCode(),
                         String.format("<img src=\"%s\" width=\"16\" height=\"16\">", iconPath),
                         null, searcher.getActionCommand());
@@ -1055,5 +1061,26 @@ public class BasicInfo extends AbstractTabbedPanel
     private void showDialog(String content, String title, Dimension size, Icon icon) {
         MessageBoxPane.showTextAreaDialog(SwingUtilities.getWindowAncestor(this), content, title,
                 MessageBoxPane.INFORMATION_MESSAGE, icon, size);
+    }
+
+    public static boolean checkGpStatus(String packageName) {
+        try {
+            String url = "https://play.google.com/store/apps/details?hl=en&id=" + packageName;
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+
+            if (response.statusCode() == 200) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (IOException | InterruptedException e) {
+            return false;
+        }
     }
 }
