@@ -14,6 +14,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.apkscanner.gui.UIController;
+import com.apkscanner.cli.CLIController;
 import com.apkscanner.gui.installer.ApkInstallWizard;
 import com.apkscanner.resource.RProp;
 import com.apkscanner.resource.RStr;
@@ -82,7 +83,7 @@ public class Main {
                     throw new ParseException("Must be just one that the package");
                 }
             } else if ("file".equals(cmdType)) {
-                if (cmd.getArgs().length > 1 /* || cmd.getArgs().length == 0 */) {
+                if (cmd.getArgs().length > 2 /* || cmd.getArgs().length == 0 */) {
                     throw new ParseException("Must be just one that the Apk file path");
                 }
 
@@ -130,7 +131,7 @@ public class Main {
     }
 
     static private void solveApkFile(CommandLine cmd) {
-        final String apkFilePath = cmd.getArgs()[0];
+        final String apkFilePath = cmd.getArgs()[1];
 
         Log.v("solveApkFile() " + apkFilePath);
 
@@ -139,9 +140,9 @@ public class Main {
             EventQueue.invokeLater(UIController.getInstance(apkScanner));
             waitAdbServer();
         } else {
-
+            apkScanner.openApk(apkFilePath);
+            CLIController cli = CLIController.getInstance(apkScanner);
         }
-        apkScanner.openApk(apkFilePath);
     }
 
     static private void solvePackage(CommandLine cmd) {
@@ -230,10 +231,10 @@ public class Main {
         normalOptions.addOption(opt);
 
 
-        // opt = new Option( "c", "cli", false, "Prints the result to the command line");
-        // allOptions.addOption(opt);
-        // targetApkOptions.addOption(opt);
-        // targetPackageOptions.addOption(opt);
+        opt = new Option( "c", "cli", false, "Prints the result to the command line");
+        allOptions.addOption(opt);
+        targetApkOptions.addOption(opt);
+        targetPackageOptions.addOption(opt);
 
         // opt = new Option( "g", "gui", false, "Show result by GUI [default]");
         // allOptions.addOption(opt);
